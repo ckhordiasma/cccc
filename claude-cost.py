@@ -1,24 +1,27 @@
 #!/usr/bin/env python3
-"""Estimate today's Claude Code spend by summing per-message usage from session files.
+"""Estimate Claude Code spend by summing per-message usage from session files.
 
-Scans all .jsonl session files modified today, extracts assistant messages with
-today's timestamp (local or UTC), and computes cost from the full token breakdown
-(input, output, cache write, cache read) using rates from pricing.json.
+Usage:
+    claude-cost.py                          # today
+    claude-cost.py 2026-05-13               # specific date
+    claude-cost.py 2026-05-01 2026-05-14    # date range (inclusive)
 """
 
 import json
+import os
 import re
-from datetime import date, datetime, timezone
+import sys
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECTS_DIR = Path.home() / ".claude" / "projects"
+PROJECTS_DIR = Path(os.environ.get("CLAUDE_PROJECTS_DIR", str(Path.home() / ".claude" / "projects")))
 TOKEN_FIELDS = ["input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"]
 RATE_FIELDS = ["input", "output", "cache_write", "cache_read"]
 
 
 def load_pricing():
-    pricing_file = SCRIPT_DIR / "pricing.json"
+    pricing_file = Path(os.environ.get("CLAUDE_PRICING_FILE", str(SCRIPT_DIR / "pricing.json")))
     data = json.loads(pricing_file.read_text())
     patterns = [(re.compile(k), v) for k, v in data["models"].items()]
     return patterns, data.get("web_search_cost_per_request", 0.01)
@@ -31,13 +34,30 @@ def get_rates(model_id: str, patterns: list) -> tuple:
     return tuple(patterns[0][1][f] for f in RATE_FIELDS)
 
 
+def date_range(start: date, end: date):
+    cur = start
+    while cur <= end:
+        yield cur
+        cur += timedelta(days=1)
+
+
 def main():
+    if len(sys.argv) >= 3:
+        start_date = date.fromisoformat(sys.argv[1])
+        end_date = date.fromisoformat(sys.argv[2])
+    elif len(sys.argv) == 2:
+        start_date = date.fromisoformat(sys.argv[1])
+        end_date = start_date
+    else:
+        start_date = date.today()
+        end_date = start_date
+
     pricing_patterns, ws_cost = load_pricing()
 
-    today_local = date.today().isoformat()
-    today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    prefixes = {today_local, today_utc}
-    cutoff = datetime.combine(date.today(), datetime.min.time()).timestamp()
+    # Include end_date+1 to catch evening messages that cross the UTC boundary
+    prefixes = {d.isoformat() for d in date_range(start_date, end_date + timedelta(days=1))}
+
+    cutoff = datetime.combine(start_date, datetime.min.time()).timestamp()
 
     totals: dict[str, list[int]] = {}
 
