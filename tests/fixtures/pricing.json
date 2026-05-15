@@ -1,0 +1,11 @@
+{
+  "_note": "Test pricing — do not modify. Expected costs in test_cost.sh depend on these exact rates.",
+  "models": {
+    "opus-4-[567]": { "input": 5.00, "output": 25.00, "cache_write": 6.25, "cache_read": 0.50 },
+    "opus-4-1":     { "input": 15.00, "output": 75.00, "cache_write": 18.75, "cache_read": 1.50 },
+    "sonnet":       { "input": 3.00, "output": 15.00, "cache_write": 3.75, "cache_read": 0.30 },
+    "haiku-4-5":    { "input": 1.00, "output": 5.00, "cache_write": 1.25, "cache_read": 0.10 },
+    "haiku":        { "input": 0.80, "output": 4.00, "cache_write": 1.00, "cache_read": 0.08 }
+  },
+  "web_search_cost_per_request": 0.01
+}
