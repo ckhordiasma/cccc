@@ -14,16 +14,16 @@ Handles the UTC/local timezone mismatch in session timestamps — messages near 
 - `awk` (ships with macOS/Linux)
 - `find` (ships with macOS/Linux)
 
-The Python version (`claude-cost.py`) requires Python 3.9+ with no external packages.
+The Python version (`python/cccc.py`) requires Python 3.9+ with no external packages.
 
 ## Usage
 
 ```sh
 # Run directly
-./claude-cost.sh    # => $42.17
+./jq/cccc.sh    # => $42.17
 
 # Or with Python
-python3 claude-cost.py
+python3 python/cccc.py
 ```
 
 ## tmux integration
@@ -32,7 +32,7 @@ Add to your `.tmux.conf`:
 
 ```tmux
 set -g status-interval 5
-set -g status-right "#(/path/to/cccc/claude-cost.sh) | %H:%M %d-%b-%y"
+set -g status-right "#(/path/to/cccc/jq/cccc.sh) | %H:%M %d-%b-%y"
 ```
 
 Then reload:

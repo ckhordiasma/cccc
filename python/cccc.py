@@ -2,9 +2,9 @@
 """Estimate Claude Code spend by summing per-message usage from session files.
 
 Usage:
-    claude-cost.py                          # today
-    claude-cost.py 2026-05-13               # specific date
-    claude-cost.py 2026-05-01 2026-05-14    # date range (inclusive)
+    cccc.py                          # today
+    cccc.py 2026-05-13               # specific date
+    cccc.py 2026-05-01 2026-05-14    # date range (inclusive)
 """
 
 import json
@@ -21,7 +21,7 @@ RATE_FIELDS = ["input", "output", "cache_write", "cache_read"]
 
 
 def load_pricing():
-    pricing_file = Path(os.environ.get("CLAUDE_PRICING_FILE", str(SCRIPT_DIR / "pricing.json")))
+    pricing_file = Path(os.environ.get("CLAUDE_PRICING_FILE", str(SCRIPT_DIR.parent / "pricing.json")))
     data = json.loads(pricing_file.read_text())
     patterns = [(re.compile(k), v) for k, v in data["models"].items()]
     return patterns, data.get("web_search_cost_per_request", 0.01)

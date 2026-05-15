@@ -2,12 +2,12 @@
 # Estimate Claude Code spend by summing per-message usage from session files.
 #
 # Usage:
-#   claude-cost.sh              # today
-#   claude-cost.sh 2026-05-13   # specific date
-#   claude-cost.sh 2026-05-01 2026-05-14   # date range (inclusive)
+#   cccc.sh              # today
+#   cccc.sh 2026-05-13   # specific date
+#   cccc.sh 2026-05-01 2026-05-14   # date range (inclusive)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PRICING="${CLAUDE_PRICING_FILE:-$SCRIPT_DIR/pricing.json}"
+PRICING="${CLAUDE_PRICING_FILE:-$SCRIPT_DIR/../pricing.json}"
 
 if [ $# -eq 0 ]; then
   START_DATE=$(date +%Y-%m-%d)

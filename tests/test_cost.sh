@@ -1,5 +1,5 @@
 #!/bin/sh
-# End-to-end tests for claude-cost.sh and claude-cost.py
+# End-to-end tests for jq/cccc.sh and python/cccc.py
 #
 # Fixtures contain messages on Jan 05, Jan 15, and Jan 25 with known token
 # counts. The key regression test: querying Jan 15 must NOT include Jan 05
@@ -37,8 +37,8 @@ echo
 # Does NOT match: Jan 05 or Jan 25 messages
 # Expected: $0.53
 echo "Test 1: Single date (Jan 15)"
-sh_out=$("$ROOT/claude-cost.sh" 2026-01-15)
-py_out=$(python3 "$ROOT/claude-cost.py" 2026-01-15)
+sh_out=$("$ROOT/jq/cccc.sh" 2026-01-15)
+py_out=$(python3 "$ROOT/python/cccc.py" 2026-01-15)
 check "sh output" '$0.53' "$sh_out"
 check "py output" '$0.53' "$py_out"
 check "sh/py parity" "$py_out" "$sh_out"
@@ -46,8 +46,8 @@ echo
 
 # --- Test 2: Date with no matches (Jan 30) ---
 echo "Test 2: No matches (Jan 30)"
-sh_out=$("$ROOT/claude-cost.sh" 2026-01-30)
-py_out=$(python3 "$ROOT/claude-cost.py" 2026-01-30)
+sh_out=$("$ROOT/jq/cccc.sh" 2026-01-30)
+py_out=$(python3 "$ROOT/python/cccc.py" 2026-01-30)
 check "sh output" '$0.00' "$sh_out"
 check "py output" '$0.00' "$py_out"
 echo
@@ -56,8 +56,8 @@ echo
 # Matches all messages across all dates
 # Expected: $5.83
 echo "Test 3: Date range (Jan 05 to Jan 25)"
-sh_out=$("$ROOT/claude-cost.sh" 2026-01-05 2026-01-25)
-py_out=$(python3 "$ROOT/claude-cost.py" 2026-01-05 2026-01-25)
+sh_out=$("$ROOT/jq/cccc.sh" 2026-01-05 2026-01-25)
+py_out=$(python3 "$ROOT/python/cccc.py" 2026-01-05 2026-01-25)
 check "sh output" '$5.83' "$sh_out"
 check "py output" '$5.83' "$py_out"
 check "sh/py parity" "$py_out" "$sh_out"
