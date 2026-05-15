@@ -3,7 +3,7 @@
 
 Scans all .jsonl session files modified today, extracts assistant messages with
 today's timestamp (local or UTC), and computes cost from the full token breakdown
-(input, output, cache write, cache read) using published Anthropic rates.
+(input, output, cache write, cache read) using rates from pricing.json.
 """
 
 import json
@@ -11,34 +11,32 @@ import re
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECTS_DIR = Path.home() / ".claude" / "projects"
-
-# Pricing per million tokens: (input, output, cache_write, cache_read)
-# Source: https://platform.claude.com/docs/en/about-claude/pricing
-PRICING_PATTERNS = [
-    (re.compile(r"opus-4-[567]"),   (5.0, 25.0, 6.25, 0.50)),
-    (re.compile(r"opus-4-1"),       (15.0, 75.0, 18.75, 1.50)),
-    (re.compile(r"sonnet"),         (3.0, 15.0, 3.75, 0.30)),
-    (re.compile(r"haiku-4-5"),      (1.0, 5.0, 1.25, 0.10)),
-    (re.compile(r"haiku"),          (0.80, 4.0, 1.0, 0.08)),
-]
-
-DEFAULT_PRICING = (5.0, 25.0, 6.25, 0.50)
 TOKEN_FIELDS = ["input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"]
+RATE_FIELDS = ["input", "output", "cache_write", "cache_read"]
 
 
-def get_pricing(model_id: str) -> tuple:
-    for pattern, rates in PRICING_PATTERNS:
+def load_pricing():
+    pricing_file = SCRIPT_DIR / "pricing.json"
+    data = json.loads(pricing_file.read_text())
+    patterns = [(re.compile(k), v) for k, v in data["models"].items()]
+    return patterns, data.get("web_search_cost_per_request", 0.01)
+
+
+def get_rates(model_id: str, patterns: list) -> tuple:
+    for pattern, rates in patterns:
         if pattern.search(model_id):
-            return rates
-    return DEFAULT_PRICING
+            return tuple(rates[f] for f in RATE_FIELDS)
+    return tuple(patterns[0][1][f] for f in RATE_FIELDS)
 
 
 def main():
+    pricing_patterns, ws_cost = load_pricing()
+
     today_local = date.today().isoformat()
     today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     prefixes = {today_local, today_utc}
-
     cutoff = datetime.combine(date.today(), datetime.min.time()).timestamp()
 
     totals: dict[str, list[int]] = {}
@@ -61,17 +59,19 @@ def main():
                         continue
                     usage = msg.get("usage", {})
                     if model not in totals:
-                        totals[model] = [0, 0, 0, 0]
+                        totals[model] = [0, 0, 0, 0, 0]
                     for i, field in enumerate(TOKEN_FIELDS):
                         totals[model][i] += usage.get(field, 0)
+                    totals[model][4] += usage.get("server_tool_use", {}).get("web_search_requests", 0)
         except (json.JSONDecodeError, OSError):
             continue
 
     total_cost = 0.0
     for model, counts in totals.items():
-        rates = get_pricing(model)
-        for tokens, rate in zip(counts, rates):
+        rates = get_rates(model, pricing_patterns)
+        for tokens, rate in zip(counts[:4], rates):
             total_cost += tokens * rate / 1_000_000
+        total_cost += counts[4] * ws_cost
 
     print(f"${total_cost:.2f}")
 
