@@ -11,6 +11,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 export CLAUDE_PROJECTS_DIR="$SCRIPT_DIR/fixtures"
 export CLAUDE_PRICING_FILE="$SCRIPT_DIR/fixtures/pricing.json"
+# Fixture timestamps are picked so each is in the middle of its UTC day; pin
+# TZ so local-midnight bounds line up with the fixture dates on any host.
+export TZ=UTC
 
 pass=0
 fail=0
@@ -158,6 +161,24 @@ for impl in sh py rs; do
   fi
 done
 rm -f "$tmpbad"
+echo
+
+# --- Test 9: UTC-date crossing — message at 02:00 UTC is yesterday-evening-local ---
+# In America/New_York (UTC-4 in May), 2026-05-16T02:00:00Z = 2026-05-15 22:00 EDT.
+# Querying 2026-05-16 must NOT count it. See BUG.md.
+echo "Test 9: UTC-date crossing (regression for BUG.md)"
+tmpdir=$(mktemp -d)
+mkdir -p "$tmpdir/projects/proj"
+cat > "$tmpdir/projects/proj/session.jsonl" <<'EOF'
+{"type":"assistant","timestamp":"2026-05-16T02:00:00.000Z","message":{"model":"claude-opus-4-6","usage":{"input_tokens":1000000,"output_tokens":1000000}}}
+EOF
+touch "$tmpdir/projects/proj/session.jsonl"
+for impl in sh py rs; do
+  out=$(TZ=America/New_York CLAUDE_PROJECTS_DIR="$tmpdir/projects" \
+        run_impl "$impl" 2026-05-16 2>&1)
+  check "$impl excludes yesterday-evening-local message" '$0.00' "$out"
+done
+rm -rf "$tmpdir"
 echo
 
 # --- Summary ---

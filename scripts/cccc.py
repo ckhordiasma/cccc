@@ -5,7 +5,7 @@ import json
 import os
 import re
 import sys
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 USAGE = """\
@@ -82,13 +82,6 @@ def get_rates(model_id: str, patterns: list) -> tuple:
     return tuple(patterns[0][1][f] for f in RATE_FIELDS)
 
 
-def date_range(start: date, end: date):
-    cur = start
-    while cur <= end:
-        yield cur
-        cur += timedelta(days=1)
-
-
 def main():
     args = sys.argv[1:]
 
@@ -112,15 +105,16 @@ def main():
 
     pricing_patterns, ws_cost = load_pricing()
 
-    # Include end_date+1 to catch evening messages that cross the UTC boundary
-    prefixes = {d.isoformat() for d in date_range(start_date, end_date + timedelta(days=1))}
-
-    cutoff = datetime.combine(start_date, datetime.min.time()).timestamp()
+    # Filter on the half-open *local-time* interval [start_unix, end_unix).
+    # Prefix-matching on UTC date strings miscounted messages near UTC midnight
+    # (e.g. 02:00 UTC was treated as today even though it's yesterday-evening-local).
+    start_unix = datetime.combine(start_date, datetime.min.time()).timestamp()
+    end_unix = datetime.combine(end_date + timedelta(days=1), datetime.min.time()).timestamp()
 
     totals: dict[str, list[int]] = {}
 
     for jsonl_file in PROJECTS_DIR.rglob("*.jsonl"):
-        if jsonl_file.stat().st_mtime < cutoff:
+        if jsonl_file.stat().st_mtime < start_unix:
             continue
         try:
             with open(jsonl_file) as f:
@@ -129,7 +123,11 @@ def main():
                     if entry.get("type") != "assistant":
                         continue
                     ts = entry.get("timestamp", "")
-                    if not any(ts.startswith(p) for p in prefixes):
+                    try:
+                        ts_unix = datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
+                    except (ValueError, AttributeError):
+                        continue
+                    if not (start_unix <= ts_unix < end_unix):
                         continue
                     msg = entry.get("message", {})
                     model = msg.get("model", "")

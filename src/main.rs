@@ -1,7 +1,7 @@
-use chrono::{Local, NaiveDate, TimeDelta};
+use chrono::{DateTime, Local, NaiveDate, TimeDelta};
 use regex::Regex;
 use serde::Deserialize;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io::{BufRead, BufReader};
@@ -185,22 +185,22 @@ fn main() {
         Err(_) => dirs().unwrap_or_else(|e| die(e)),
     };
 
-    // Build date prefixes (include end_date+1 for UTC overlap)
-    let mut prefixes = HashSet::new();
-    let mut cur = start_date;
-    let end_plus1 = end_date + TimeDelta::days(1);
-    while cur <= end_plus1 {
-        prefixes.insert(cur.format("%Y-%m-%d").to_string());
-        cur += TimeDelta::days(1);
-    }
-
-    // Cutoff: midnight of start_date as Unix timestamp
-    let cutoff = start_date
+    // Filter messages whose timestamp falls in [start_unix, end_unix) where the
+    // boundaries are *local* midnight. Prefix-matching on UTC date strings
+    // miscounted messages near UTC midnight (yesterday-evening-local rolled into today-UTC).
+    let start_unix = start_date
         .and_hms_opt(0, 0, 0)
         .unwrap()
         .and_local_timezone(Local)
         .unwrap()
-        .timestamp() as u64;
+        .timestamp();
+    let end_unix = (end_date + TimeDelta::days(1))
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
+        .and_local_timezone(Local)
+        .unwrap()
+        .timestamp();
+    let cutoff = start_unix as u64;
 
     let mut totals: HashMap<String, Totals> = HashMap::new();
 
@@ -243,7 +243,11 @@ fn main() {
                 Some(t) => t,
                 None => continue,
             };
-            if !prefixes.iter().any(|p| ts.starts_with(p.as_str())) {
+            let ts_unix = match DateTime::parse_from_rfc3339(ts) {
+                Ok(dt) => dt.timestamp(),
+                Err(_) => continue,
+            };
+            if ts_unix < start_unix || ts_unix >= end_unix {
                 continue;
             }
             let msg = match &entry.message {

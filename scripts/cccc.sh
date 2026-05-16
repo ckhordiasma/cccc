@@ -54,24 +54,12 @@ else
   END_DATE="$2"
 fi
 
-# Build pipe-delimited list of date prefixes to match.
-# Timestamps in session files are UTC, so for each local date include the next
-# day to catch evening messages that cross the UTC boundary.
-DATE_PREFIXES=""
-cur="$START_DATE"
+# Compute local-midnight unix bounds for the half-open interval [START_UNIX, END_UNIX).
+# Prefix-matching on UTC date strings miscounted messages near UTC midnight
+# (e.g. 02:00 UTC counted as today even though it's yesterday-evening-local).
 END_PLUS1=$(date -v+1d -jf %Y-%m-%d "$END_DATE" +%Y-%m-%d 2>/dev/null || date -d "$END_DATE + 1 day" +%Y-%m-%d 2>/dev/null)
-while true; do
-  if [ -z "$DATE_PREFIXES" ]; then
-    DATE_PREFIXES="$cur"
-  else
-    case "$DATE_PREFIXES" in
-      *"$cur"*) ;;
-      *) DATE_PREFIXES="$DATE_PREFIXES|$cur" ;;
-    esac
-  fi
-  [ "$cur" = "$END_PLUS1" ] && break
-  cur=$(date -v+1d -jf %Y-%m-%d "$cur" +%Y-%m-%d 2>/dev/null || date -d "$cur + 1 day" +%Y-%m-%d 2>/dev/null)
-done
+START_UNIX=$(date -jf "%Y-%m-%d" "$START_DATE" +%s 2>/dev/null || date -d "$START_DATE" +%s 2>/dev/null)
+END_UNIX=$(date -jf "%Y-%m-%d" "$END_PLUS1" +%s 2>/dev/null || date -d "$END_PLUS1" +%s 2>/dev/null)
 
 if [ ! -r "$PRICING" ]; then
   printf "cccc: failed to read pricing file '%s'\n" "$PRICING" >&2
@@ -102,10 +90,10 @@ fi
 PROJECTS_DIR="${CLAUDE_PROJECTS_DIR:-$HOME/.claude/projects}"
 
 find "$PROJECTS_DIR" -name "*.jsonl" -type f -newermt "$START_DATE" -exec \
-  jq -r --arg prefixes "$DATE_PREFIXES" '
-    ($prefixes | split("|")) as $ps |
-    .timestamp as $ts |
-    select(.type == "assistant" and $ts and any($ps[]; . as $p | $ts | startswith($p))) |
+  jq -r --argjson start_unix "$START_UNIX" --argjson end_unix "$END_UNIX" '
+    select(.type == "assistant" and .timestamp != null) |
+    (.timestamp | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) as $ts |
+    select($ts >= $start_unix and $ts < $end_unix) |
     .message.model as $m | .message.usage |
     "\($m) \(.input_tokens // 0) \(.output_tokens // 0) \(.cache_creation_input_tokens // 0) \(.cache_read_input_tokens // 0) \(.server_tool_use.web_search_requests // 0)"
   ' {} + 2>/dev/null | \
