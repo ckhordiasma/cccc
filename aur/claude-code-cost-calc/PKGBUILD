@@ -1,5 +1,6 @@
 # Maintainer: Christopher Kodama <ckhordiasma@gmail.com>
-pkgname=cccc
+pkgname=claude-code-cost-calc
+_upstream=cccc
 pkgver=0.1.0
 pkgrel=1
 pkgdesc="Estimate Claude Code API spend by scanning local session files"
@@ -8,31 +9,32 @@ url="https://github.com/ckhordiasma/cccc"
 license=('GPL-3.0-or-later')
 depends=('gcc-libs')
 makedepends=('cargo')
+conflicts=('cccc' 'cccc-bin')
 source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/v${pkgver}.tar.gz")
 # After tagging v${pkgver} upstream, regenerate with: updpkgsums
 sha256sums=('SKIP')
 
 prepare() {
-    cd "$pkgname-$pkgver"
+    cd "${_upstream}-${pkgver}"
     export RUSTUP_TOOLCHAIN=stable
     cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
 }
 
 build() {
-    cd "$pkgname-$pkgver"
+    cd "${_upstream}-${pkgver}"
     export RUSTUP_TOOLCHAIN=stable
     export CARGO_TARGET_DIR=target
     cargo build --frozen --release
 }
 
 check() {
-    cd "$pkgname-$pkgver"
+    cd "${_upstream}-${pkgver}"
     export RUSTUP_TOOLCHAIN=stable
     cargo test --frozen
 }
 
 package() {
-    cd "$pkgname-$pkgver"
+    cd "${_upstream}-${pkgver}"
     install -Dm755 target/release/cccc "$pkgdir/usr/bin/cccc"
     install -Dm644 README.md "$pkgdir/usr/share/doc/${pkgname}/README.md"
     install -Dm644 LICENSE   "$pkgdir/usr/share/licenses/${pkgname}/LICENSE"

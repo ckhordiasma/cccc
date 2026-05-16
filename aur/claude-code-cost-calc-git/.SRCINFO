@@ -1,4 +1,4 @@
-pkgbase = cccc-git
+pkgbase = claude-code-cost-calc-git
 	pkgdesc = Estimate Claude Code API spend by scanning local session files (development version)
 	pkgver = r1.cac03ce
 	pkgrel = 1
@@ -8,9 +8,11 @@ pkgbase = cccc-git
 	makedepends = cargo
 	makedepends = git
 	depends = gcc-libs
-	provides = cccc
+	provides = claude-code-cost-calc
+	conflicts = claude-code-cost-calc
 	conflicts = cccc
+	conflicts = cccc-bin
 	source = cccc::git+https://github.com/ckhordiasma/cccc.git
 	sha256sums = SKIP
 
-pkgname = cccc-git
+pkgname = claude-code-cost-calc-git
