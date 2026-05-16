@@ -9,6 +9,7 @@ url="https://github.com/ckhordiasma/cccc"
 license=('GPL-3.0-or-later')
 depends=('gcc-libs')
 makedepends=('cargo')
+options=('!debug')
 conflicts=('cccc' 'cccc-bin')
 source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/v${pkgver}.tar.gz")
 # After tagging v${pkgver} upstream, regenerate with: updpkgsums

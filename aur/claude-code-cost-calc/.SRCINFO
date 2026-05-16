@@ -9,6 +9,7 @@ pkgbase = claude-code-cost-calc
 	depends = gcc-libs
 	conflicts = cccc
 	conflicts = cccc-bin
+	options = !debug
 	source = claude-code-cost-calc-0.1.0.tar.gz::https://github.com/ckhordiasma/cccc/archive/refs/tags/v0.1.0.tar.gz
 	sha256sums = SKIP
 
