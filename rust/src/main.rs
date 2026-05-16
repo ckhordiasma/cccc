@@ -75,8 +75,13 @@ impl Totals {
     }
 }
 
-fn load_pricing(pricing_path: &PathBuf) -> (Vec<(Regex, ModelRates)>, f64) {
-    let data = fs::read_to_string(pricing_path).expect("failed to read pricing.json");
+const EMBEDDED_PRICING: &str = include_str!("../../pricing.json");
+
+fn load_pricing(pricing_path: Option<&PathBuf>) -> (Vec<(Regex, ModelRates)>, f64) {
+    let data = match pricing_path {
+        Some(p) => fs::read_to_string(p).expect("failed to read pricing.json"),
+        None => EMBEDDED_PRICING.to_string(),
+    };
     let config: PricingConfig = serde_json::from_str(&data).expect("failed to parse pricing.json");
 
     let patterns: Vec<(Regex, ModelRates)> = config
@@ -126,16 +131,8 @@ fn main() {
         }
     };
 
-    let exe_dir = env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-        .unwrap_or_else(|| PathBuf::from("."));
-
-    let pricing_path = match env::var("CLAUDE_PRICING_FILE") {
-        Ok(p) => PathBuf::from(p),
-        Err(_) => exe_dir.join("../../../pricing.json"),
-    };
-    let (pricing_patterns, ws_cost) = load_pricing(&pricing_path);
+    let pricing_path = env::var("CLAUDE_PRICING_FILE").ok().map(PathBuf::from);
+    let (pricing_patterns, ws_cost) = load_pricing(pricing_path.as_ref());
 
     let projects_dir = match env::var("CLAUDE_PROJECTS_DIR") {
         Ok(p) => PathBuf::from(p),
