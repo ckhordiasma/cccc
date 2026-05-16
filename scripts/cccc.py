@@ -28,6 +28,11 @@ TOKEN_FIELDS = ["input_tokens", "output_tokens", "cache_creation_input_tokens", 
 RATE_FIELDS = ["input", "output", "cache_write", "cache_read"]
 
 
+def die(msg: str) -> None:
+    print(f"cccc: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
 def die_with_usage(msg: str) -> None:
     print(f"cccc: {msg}\n", file=sys.stderr)
     print(USAGE, end="", file=sys.stderr)
@@ -43,8 +48,30 @@ def parse_date(s: str) -> date:
 
 def load_pricing():
     pricing_file = Path(os.environ.get("CLAUDE_PRICING_FILE", str(SCRIPT_DIR.parent / "pricing.json")))
-    data = json.loads(pricing_file.read_text())
-    patterns = [(re.compile(k), v) for k, v in data["models"].items()]
+    try:
+        text = pricing_file.read_text()
+    except OSError as e:
+        die(f"failed to read pricing file {pricing_file}: {e.strerror}")
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        die(f"failed to parse pricing file {pricing_file}: {e}")
+    if not isinstance(data, dict) or "models" not in data or not isinstance(data["models"], dict):
+        die(f"invalid pricing file {pricing_file}: missing or non-object 'models'")
+    patterns = []
+    for k, v in data["models"].items():
+        try:
+            compiled = re.compile(k)
+        except re.error as e:
+            die(f"invalid regex {k!r} in pricing file: {e}")
+        if not isinstance(v, dict):
+            die(f"invalid pricing file {pricing_file}: model {k!r} is not an object")
+        for field in RATE_FIELDS:
+            if not isinstance(v.get(field), (int, float)):
+                die(f"invalid pricing file {pricing_file}: model {k!r} missing or non-numeric {field!r}")
+        patterns.append((compiled, v))
+    if not patterns:
+        die(f"invalid pricing file {pricing_file}: no models defined")
     return patterns, data.get("web_search_cost_per_request", 0.01)
 
 

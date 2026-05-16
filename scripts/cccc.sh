@@ -73,9 +73,31 @@ while true; do
   cur=$(date -v+1d -jf %Y-%m-%d "$cur" +%Y-%m-%d 2>/dev/null || date -d "$cur + 1 day" +%Y-%m-%d 2>/dev/null)
 done
 
+if [ ! -r "$PRICING" ]; then
+  printf "cccc: failed to read pricing file '%s'\n" "$PRICING" >&2
+  exit 1
+fi
+
 # Pre-extract pricing as pipe-delimited single line
-PRICING_LINES=$(jq -r '[.models | to_entries[] | "\(.key) \(.value.input) \(.value.output) \(.value.cache_write) \(.value.cache_read)"] | join("|")' "$PRICING")
-WS_COST=$(jq -r '.web_search_cost_per_request' "$PRICING")
+PRICING_LINES=$(jq -r '[.models | to_entries[] | "\(.key) \(.value.input) \(.value.output) \(.value.cache_write) \(.value.cache_read)"] | join("|")' "$PRICING" 2>&1) || {
+  printf "cccc: failed to parse pricing file '%s': %s\n" "$PRICING" "$PRICING_LINES" >&2
+  exit 1
+}
+WS_COST=$(jq -r '.web_search_cost_per_request' "$PRICING" 2>&1) || {
+  printf "cccc: failed to parse pricing file '%s': %s\n" "$PRICING" "$WS_COST" >&2
+  exit 1
+}
+
+# jq emits "null" for missing keys; coerces to 0 in awk and silently masks bad pricing
+if [ -z "$PRICING_LINES" ]; then
+  printf "cccc: invalid pricing file '%s': no models defined\n" "$PRICING" >&2
+  exit 1
+fi
+BAD_MODEL=$(printf "%s" "$PRICING_LINES" | tr '|' '\n' | awk '{ for (i=2; i<=5; i++) if ($i == "null" || $i == "") { print $1; exit } }')
+if [ -n "$BAD_MODEL" ]; then
+  printf "cccc: invalid pricing file '%s': model '%s' has missing or non-numeric rate fields\n" "$PRICING" "$BAD_MODEL" >&2
+  exit 1
+fi
 
 PROJECTS_DIR="${CLAUDE_PROJECTS_DIR:-$HOME/.claude/projects}"
 

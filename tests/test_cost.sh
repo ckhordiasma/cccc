@@ -127,6 +127,39 @@ for impl in sh py rs; do
 done
 echo
 
+# --- Test 7: invalid pricing file exits cleanly ---
+echo "Test 7: invalid pricing file exits cleanly"
+for impl in sh py rs; do
+  out=$(CLAUDE_PRICING_FILE=/nonexistent/pricing.json run_impl "$impl" 2026-01-15 2>&1)
+  rc=$?
+  if [ "$rc" -eq 1 ] && ! printf "%s" "$out" | grep -qE "(panicked at|Traceback)"; then
+    printf "  PASS  %s invalid pricing file\n" "$impl"
+    pass=$((pass + 1))
+  else
+    printf "  FAIL  %s invalid pricing file (rc=%s, out=%s)\n" "$impl" "$rc" "$out"
+    fail=$((fail + 1))
+  fi
+done
+echo
+
+# --- Test 8: pricing file missing required fields ---
+echo "Test 8: incomplete pricing file exits cleanly"
+tmpbad=$(mktemp)
+echo '{"models": {"opus": {"input": 1}}}' > "$tmpbad"
+for impl in sh py rs; do
+  out=$(CLAUDE_PRICING_FILE="$tmpbad" run_impl "$impl" 2026-01-15 2>&1)
+  rc=$?
+  if [ "$rc" -eq 1 ] && ! printf "%s" "$out" | grep -qE "(panicked at|Traceback)"; then
+    printf "  PASS  %s incomplete pricing\n" "$impl"
+    pass=$((pass + 1))
+  else
+    printf "  FAIL  %s incomplete pricing (rc=%s, out=%s)\n" "$impl" "$rc" "$out"
+    fail=$((fail + 1))
+  fi
+done
+rm -f "$tmpbad"
+echo
+
 # --- Summary ---
 total=$((pass + fail))
 if [ "$fail" -eq 0 ]; then
