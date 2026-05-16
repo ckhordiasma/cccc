@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
-"""Estimate Claude Code spend by summing per-message usage from session files.
-
-Usage:
-    cccc.py                          # today
-    cccc.py 2026-05-13               # specific date
-    cccc.py 2026-05-01 2026-05-14    # date range (inclusive)
-"""
+"""Estimate Claude Code spend by summing per-message usage from session files."""
 
 import json
 import os
@@ -14,10 +8,37 @@ import sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+USAGE = """\
+Estimate Claude Code API spend by scanning local session files.
+
+Usage:
+    cccc                            today
+    cccc YYYY-MM-DD                 specific date
+    cccc YYYY-MM-DD YYYY-MM-DD      date range (inclusive)
+    cccc -h | --help                show this help
+
+Environment:
+    CLAUDE_PROJECTS_DIR             override session-file directory (default: ~/.claude/projects)
+    CLAUDE_PRICING_FILE             use this pricing.json instead of the default
+"""
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECTS_DIR = Path(os.environ.get("CLAUDE_PROJECTS_DIR", str(Path.home() / ".claude" / "projects")))
 TOKEN_FIELDS = ["input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"]
 RATE_FIELDS = ["input", "output", "cache_write", "cache_read"]
+
+
+def die_with_usage(msg: str) -> None:
+    print(f"cccc: {msg}\n", file=sys.stderr)
+    print(USAGE, end="", file=sys.stderr)
+    sys.exit(1)
+
+
+def parse_date(s: str) -> date:
+    try:
+        return date.fromisoformat(s)
+    except ValueError:
+        die_with_usage(f"invalid date {s!r} (expected YYYY-MM-DD)")
 
 
 def load_pricing():
@@ -42,11 +63,21 @@ def date_range(start: date, end: date):
 
 
 def main():
-    if len(sys.argv) >= 3:
-        start_date = date.fromisoformat(sys.argv[1])
-        end_date = date.fromisoformat(sys.argv[2])
-    elif len(sys.argv) == 2:
-        start_date = date.fromisoformat(sys.argv[1])
+    args = sys.argv[1:]
+
+    if any(a in ("-h", "--help") for a in args):
+        print(USAGE, end="")
+        return
+    if args and args[0].startswith("-"):
+        die_with_usage(f"unknown option {args[0]!r}")
+
+    if len(args) > 2:
+        die_with_usage("too many arguments")
+    elif len(args) == 2:
+        start_date = parse_date(args[0])
+        end_date = parse_date(args[1])
+    elif len(args) == 1:
+        start_date = parse_date(args[0])
         end_date = start_date
     else:
         start_date = date.today()

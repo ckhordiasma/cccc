@@ -4,8 +4,8 @@
 # Fixtures contain messages on Jan 05, Jan 15, and Jan 25 with known token
 # counts. The key regression test: querying Jan 15 must NOT include Jan 05
 # or Jan 25 messages (the jq startswith scoping bug caused all dates to match).
-
-set -e
+#
+# Tests 4-6 intentionally run failing invocations, so set -e is omitted.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -70,6 +70,61 @@ check "py output" '$6.33' "$py_out"
 check "rs output" '$6.33' "$rs_out"
 check "sh/py parity" "$py_out" "$sh_out"
 check "sh/rs parity" "$rs_out" "$sh_out"
+echo
+
+# Helper: run "$@" with sh/py/rs, capture stdout+stderr and exit code
+run_impl() {
+  impl="$1"; shift
+  case "$impl" in
+    sh) "$ROOT/scripts/cccc.sh" "$@" ;;
+    py) python3 "$ROOT/scripts/cccc.py" "$@" ;;
+    rs) "$ROOT/target/release/cccc" "$@" ;;
+  esac
+}
+
+# --- Test 4: --help produces usage and exits 0 ---
+echo "Test 4: --help produces usage"
+for impl in sh py rs; do
+  out=$(run_impl "$impl" --help 2>&1)
+  rc=$?
+  if [ "$rc" -eq 0 ] && printf "%s" "$out" | grep -q "^Usage:"; then
+    printf "  PASS  %s --help\n" "$impl"
+    pass=$((pass + 1))
+  else
+    printf "  FAIL  %s --help (rc=%s, out=%s)\n" "$impl" "$rc" "$out"
+    fail=$((fail + 1))
+  fi
+done
+echo
+
+# --- Test 5: invalid date exits 1 without panicking ---
+echo "Test 5: invalid date exits cleanly"
+for impl in sh py rs; do
+  out=$(run_impl "$impl" not-a-date 2>&1)
+  rc=$?
+  if [ "$rc" -eq 1 ] && ! printf "%s" "$out" | grep -qE "(panicked at|Traceback)"; then
+    printf "  PASS  %s invalid date\n" "$impl"
+    pass=$((pass + 1))
+  else
+    printf "  FAIL  %s invalid date (rc=%s, out=%s)\n" "$impl" "$rc" "$out"
+    fail=$((fail + 1))
+  fi
+done
+echo
+
+# --- Test 6: unknown flag exits 1 without panicking ---
+echo "Test 6: unknown flag exits cleanly"
+for impl in sh py rs; do
+  out=$(run_impl "$impl" --bogus 2>&1)
+  rc=$?
+  if [ "$rc" -eq 1 ] && ! printf "%s" "$out" | grep -qE "(panicked at|Traceback)"; then
+    printf "  PASS  %s unknown flag\n" "$impl"
+    pass=$((pass + 1))
+  else
+    printf "  FAIL  %s unknown flag (rc=%s, out=%s)\n" "$impl" "$rc" "$out"
+    fail=$((fail + 1))
+  fi
+done
 echo
 
 # --- Summary ---

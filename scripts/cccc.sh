@@ -1,10 +1,44 @@
 #!/bin/sh
 # Estimate Claude Code spend by summing per-message usage from session files.
-#
-# Usage:
-#   cccc.sh              # today
-#   cccc.sh 2026-05-13   # specific date
-#   cccc.sh 2026-05-01 2026-05-14   # date range (inclusive)
+
+USAGE='Estimate Claude Code API spend by scanning local session files.
+
+Usage:
+    cccc                            today
+    cccc YYYY-MM-DD                 specific date
+    cccc YYYY-MM-DD YYYY-MM-DD      date range (inclusive)
+    cccc -h | --help                show this help
+
+Environment:
+    CLAUDE_PROJECTS_DIR             override session-file directory (default: ~/.claude/projects)
+    CLAUDE_PRICING_FILE             use this pricing.json instead of the default
+'
+
+usage_die() {
+  printf "cccc: %s\n\n%s" "$1" "$USAGE" >&2
+  exit 1
+}
+
+validate_date() {
+  case "$1" in
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
+    *) usage_die "invalid date '$1' (expected YYYY-MM-DD)" ;;
+  esac
+  date -jf %Y-%m-%d "$1" +%Y-%m-%d >/dev/null 2>&1 || \
+    date -d "$1" +%Y-%m-%d >/dev/null 2>&1 || \
+    usage_die "invalid date '$1' (expected YYYY-MM-DD)"
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help) printf "%s" "$USAGE"; exit 0 ;;
+    -*) usage_die "unknown option '$arg'" ;;
+  esac
+done
+
+[ $# -gt 2 ] && usage_die "too many arguments"
+[ $# -ge 1 ] && validate_date "$1"
+[ $# -ge 2 ] && validate_date "$2"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PRICING="${CLAUDE_PRICING_FILE:-$SCRIPT_DIR/../pricing.json}"
