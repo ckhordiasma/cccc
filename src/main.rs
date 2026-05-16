@@ -75,7 +75,7 @@ impl Totals {
     }
 }
 
-const EMBEDDED_PRICING: &str = include_str!("../../pricing.json");
+const EMBEDDED_PRICING: &str = include_str!("../pricing.json");
 
 fn load_pricing(pricing_path: Option<&PathBuf>) -> (Vec<(Regex, ModelRates)>, f64) {
     let data = match pricing_path {

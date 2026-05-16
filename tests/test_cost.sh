@@ -1,5 +1,5 @@
 #!/bin/sh
-# End-to-end tests for jq/cccc.sh, python/cccc.py, and rust/target/release/cccc
+# End-to-end tests for scripts/cccc.sh, scripts/cccc.py, and target/release/cccc
 #
 # Fixtures contain messages on Jan 05, Jan 15, and Jan 25 with known token
 # counts. The key regression test: querying Jan 15 must NOT include Jan 05
@@ -38,9 +38,9 @@ echo
 # Haiku uses haiku-4-5 rates ($1/$5) not haiku ($0.80/$4) — catches pricing pattern order bugs
 # Expected: $1.03
 echo "Test 1: Single date (Jan 15)"
-sh_out=$("$ROOT/jq/cccc.sh" 2026-01-15)
-py_out=$(python3 "$ROOT/python/cccc.py" 2026-01-15)
-rs_out=$("$ROOT/rust/target/release/cccc" 2026-01-15)
+sh_out=$("$ROOT/scripts/cccc.sh" 2026-01-15)
+py_out=$(python3 "$ROOT/scripts/cccc.py" 2026-01-15)
+rs_out=$("$ROOT/target/release/cccc" 2026-01-15)
 check "sh output" '$1.03' "$sh_out"
 check "py output" '$1.03' "$py_out"
 check "rs output" '$1.03' "$rs_out"
@@ -50,9 +50,9 @@ echo
 
 # --- Test 2: Date with no matches (Jan 30) ---
 echo "Test 2: No matches (Jan 30)"
-sh_out=$("$ROOT/jq/cccc.sh" 2026-01-30)
-py_out=$(python3 "$ROOT/python/cccc.py" 2026-01-30)
-rs_out=$("$ROOT/rust/target/release/cccc" 2026-01-30)
+sh_out=$("$ROOT/scripts/cccc.sh" 2026-01-30)
+py_out=$(python3 "$ROOT/scripts/cccc.py" 2026-01-30)
+rs_out=$("$ROOT/target/release/cccc" 2026-01-30)
 check "sh output" '$0.00' "$sh_out"
 check "py output" '$0.00' "$py_out"
 check "rs output" '$0.00' "$rs_out"
@@ -62,9 +62,9 @@ echo
 # Matches all messages across all dates
 # Expected: $6.33
 echo "Test 3: Date range (Jan 05 to Jan 25)"
-sh_out=$("$ROOT/jq/cccc.sh" 2026-01-05 2026-01-25)
-py_out=$(python3 "$ROOT/python/cccc.py" 2026-01-05 2026-01-25)
-rs_out=$("$ROOT/rust/target/release/cccc" 2026-01-05 2026-01-25)
+sh_out=$("$ROOT/scripts/cccc.sh" 2026-01-05 2026-01-25)
+py_out=$(python3 "$ROOT/scripts/cccc.py" 2026-01-05 2026-01-25)
+rs_out=$("$ROOT/target/release/cccc" 2026-01-05 2026-01-25)
 check "sh output" '$6.33' "$sh_out"
 check "py output" '$6.33' "$py_out"
 check "rs output" '$6.33' "$rs_out"

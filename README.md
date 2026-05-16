@@ -11,25 +11,25 @@ Handles the UTC/local timezone mismatch in session timestamps — messages near 
 ## Usage
 
 ```sh
-./jq/cccc.sh                        # today
-./jq/cccc.sh 2026-05-13             # specific date
-./jq/cccc.sh 2026-05-01 2026-05-14  # date range (inclusive)
+./scripts/cccc.sh                        # today
+./scripts/cccc.sh 2026-05-13             # specific date
+./scripts/cccc.sh 2026-05-01 2026-05-14  # date range (inclusive)
 
 # Python
-python3 python/cccc.py 2026-05-13
+python3 scripts/cccc.py 2026-05-13
 
 # Rust
-cd rust && cargo build --release
-./rust/target/release/cccc 2026-05-13
+cargo build --release
+./target/release/cccc 2026-05-13
 ```
 
 ## Implementations
 
 | Version | Path | Dependencies |
 |---------|------|-------------|
-| Shell | `jq/cccc.sh` | `jq`, `awk`, `find` (ships with macOS/Linux) |
-| Python | `python/cccc.py` | Python 3.9+ (no external packages) |
-| Rust | `rust/` | Rust toolchain (`cargo build --release` to compile) |
+| Shell | `scripts/cccc.sh` | `jq`, `awk`, `find` (ships with macOS/Linux) |
+| Python | `scripts/cccc.py` | Python 3.9+ (no external packages) |
+| Rust | `src/` | Rust toolchain (`cargo build --release` to compile) |
 
 ## tmux integration
 
@@ -37,7 +37,7 @@ Add to your `.tmux.conf` for a live cost display:
 
 ```tmux
 set -g status-interval 5
-set -g status-right "#(/path/to/cccc/jq/cccc.sh) | %H:%M %d-%b-%y"
+set -g status-right "#(/path/to/cccc/scripts/cccc.sh) | %H:%M %d-%b-%y"
 ```
 
 ## Updating pricing
