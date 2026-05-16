@@ -44,6 +44,14 @@ set -g status-right "#(/path/to/cccc/scripts/cccc.sh) | %H:%M %d-%b-%y"
 
 Edit `pricing.json` when Anthropic changes their rates. Keys are regex patterns matched against model IDs, ordered most-specific-first. Rates are per million tokens in USD.
 
+Or regenerate from the live pricing page:
+
+```sh
+scripts/update-pricing.py > pricing.json.new && mv pricing.json.new pricing.json
+```
+
+The helper keeps the existing regex keys and only refreshes rates. It errors out if a key now matches multiple models with diverging rates — that means the regex needs to be split into separate keys (a human call).
+
 ## Tests
 
 ```sh
