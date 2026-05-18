@@ -58,8 +58,8 @@ fi
 # Prefix-matching on UTC date strings miscounted messages near UTC midnight
 # (e.g. 02:00 UTC counted as today even though it's yesterday-evening-local).
 END_PLUS1=$(date -v+1d -jf %Y-%m-%d "$END_DATE" +%Y-%m-%d 2>/dev/null || date -d "$END_DATE + 1 day" +%Y-%m-%d 2>/dev/null)
-START_UNIX=$(date -jf "%Y-%m-%d" "$START_DATE" +%s 2>/dev/null || date -d "$START_DATE" +%s 2>/dev/null)
-END_UNIX=$(date -jf "%Y-%m-%d" "$END_PLUS1" +%s 2>/dev/null || date -d "$END_PLUS1" +%s 2>/dev/null)
+START_UNIX=$(date -jf "%Y-%m-%d %H:%M:%S" "$START_DATE 00:00:00" +%s 2>/dev/null || date -d "$START_DATE" +%s 2>/dev/null)
+END_UNIX=$(date -jf "%Y-%m-%d %H:%M:%S" "$END_PLUS1 00:00:00" +%s 2>/dev/null || date -d "$END_PLUS1" +%s 2>/dev/null)
 
 if [ ! -r "$PRICING" ]; then
   printf "cccc: failed to read pricing file '%s'\n" "$PRICING" >&2
