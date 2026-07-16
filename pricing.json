@@ -1,11 +1,14 @@
 {
   "_source": "https://platform.claude.com/docs/en/about-claude/pricing",
-  "_updated": "2026-05-14",
+  "_updated": "2026-07-16",
   "_rates": "per million tokens (USD). cache_write = 1.25x input. cache_read = 0.1x input.",
   "_keys": "regex patterns matched against model ID, ordered most-specific-first",
   "models": {
-    "opus-4-[567]": { "input": 5.00, "output": 25.00, "cache_write": 6.25, "cache_read": 0.50 },
-    "opus-4-1":     { "input": 15.00, "output": 75.00, "cache_write": 18.75, "cache_read": 1.50 },
+    "fable":        { "input": 10.00, "output": 50.00, "cache_write": 12.50, "cache_read": 1.00 },
+    "mythos":       { "input": 10.00, "output": 50.00, "cache_write": 12.50, "cache_read": 1.00 },
+    "opus-4-[5-8]": { "input": 5.00, "output": 25.00, "cache_write": 6.25, "cache_read": 0.50 },
+    "opus":         { "input": 15.00, "output": 75.00, "cache_write": 18.75, "cache_read": 1.50 },
+    "sonnet-5":     { "input": 2.00, "output": 10.00, "cache_write": 2.50, "cache_read": 0.20 },
     "sonnet":       { "input": 3.00, "output": 15.00, "cache_write": 3.75, "cache_read": 0.30 },
     "haiku-4-5":    { "input": 1.00, "output": 5.00, "cache_write": 1.25, "cache_read": 0.10 },
     "haiku":        { "input": 0.80, "output": 4.00, "cache_write": 1.00, "cache_read": 0.08 }

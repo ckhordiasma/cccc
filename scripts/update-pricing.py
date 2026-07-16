@@ -76,8 +76,22 @@ def find_pricing_table(tables):
     raise SystemExit("ERROR: could not find model pricing table; page format may have changed")
 
 
+def extract_validity(name, today):
+    """Return True if a date-qualified model name is valid today."""
+    m = re.search(r"through\s+(\w+\s+\d{1,2},?\s*\d{4})", name)
+    if m:
+        end = datetime.datetime.strptime(m.group(1).replace(",", ""), "%B %d %Y").date()
+        return today <= end
+    m = re.search(r"starting\s+(\w+\s+\d{1,2},?\s*\d{4})", name)
+    if m:
+        start = datetime.datetime.strptime(m.group(1).replace(",", ""), "%B %d %Y").date()
+        return today >= start
+    return True
+
+
 def model_name_to_api_id(name):
     name = re.sub(r"\(.*?\)", "", name).strip()
+    name = re.sub(r"(?:through|starting|until|from)\s+\w+\s+\d{1,2},?\s*\d{4}.*", "", name).strip()
     return re.sub(r"\s+", "-", name.lower().replace(".", "-"))
 
 
@@ -88,7 +102,8 @@ def main():
     parser.feed(html)
     table = find_pricing_table(parser.tables)
 
-    page_models = []
+    today = datetime.date.today()
+    page_models_raw = []
     for row in table[1:]:
         if len(row) < 6:
             continue
@@ -101,7 +116,22 @@ def main():
             }
         except ValueError:
             continue
-        page_models.append((row[0], model_name_to_api_id(row[0]), rates))
+        page_models_raw.append((row[0], model_name_to_api_id(row[0]), rates))
+
+    seen_ids = {}
+    page_models = []
+    for name, api_id, rates in page_models_raw:
+        if api_id in seen_ids:
+            prev_name, prev_rates = seen_ids[api_id]
+            if rates == prev_rates:
+                continue
+            if extract_validity(name, today):
+                seen_ids[api_id] = (name, rates)
+                page_models = [(n, a, r) for n, a, r in page_models if a != api_id]
+                page_models.append((name, api_id, rates))
+            continue
+        seen_ids[api_id] = (name, rates)
+        page_models.append((name, api_id, rates))
 
     key_matches = {key: [] for key in existing["models"]}
     for name, api_id, rates in page_models:
